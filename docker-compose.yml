@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   db:
     image: mariadb:10.11
@@ -8,6 +10,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME}
+      TZ: America/Bogota
     ports:
       - "3307:3306"
     volumes:
@@ -18,12 +21,12 @@ services:
     build: .
     container_name: sentinel_web_container
     restart: always
-    ports:
-      - "5000:5000"
     env_file:
       - .env
     environment:
-      - DB_HOST=db
+      TZ: America/Bogota
+    ports:
+      - "5000:5000"
     depends_on:
       - db
 
