@@ -94,4 +94,12 @@ CREATE TABLE IF NOT EXISTS audit_log (
         REFERENCES admins (admin_id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ── ADMIN POR DEFECTO ────────────────────────────────────────
+INSERT IGNORE INTO admins (full_name, email, password_hash)
+VALUES (
+    'Administrador',
+    'admin@admin.com',
+    'scrypt:32768:8:1$2V7hkBilDTTHhClz$12e84315915768b906340ebde2745131538a7c46cf777a856343c5bb8fc992b3e443cfa19a5992fb5e7daee5937133bf30dc94f0918d60c66d3321a6268aa362'
+);
+
 SET FOREIGN_KEY_CHECKS = 1;
