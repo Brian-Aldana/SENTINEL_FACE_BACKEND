@@ -121,18 +121,23 @@ def recognize():
     if not image_file:
         return jsonify({"status": "error", "message": "No se proporcionó imagen"}), 400
 
-    image_bytes = image_file.read()
+    image_bytes  = image_file.read()
+    extra_frames = []
+    for key in ("image_1", "image_2"):
+        f = request.files.get(key)
+        if f:
+            extra_frames.append(f.read())
 
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
     try:
         cursor.execute(
-            "SELECT user_id, full_name, embedding FROM users WHERE embedding IS NOT NULL"
+            "SELECT user_id, full_name, embedding FROM users WHERE embedding IS NOT NULL AND is_active = 1"
         )
         users_db = cursor.fetchall()
 
-        result = process_recognition(image_bytes, users_db)
+        result = process_recognition(image_bytes, users_db, extra_frames or None)
 
         user_id       = result.get("user_id")
         access_status = result.get("access")
