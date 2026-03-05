@@ -25,13 +25,12 @@ def sanitize_string(text: str) -> str:
     return re.sub(r"[^a-zA-Z0-9\sáéíóúÁÉÍÓÚñÑ\-\.]", "", text).strip()
 
 def ensure_admin_exists(cursor, conn):
-    """Crea el usuario admin por defecto si no existe."""
     cursor.execute("SELECT user_id FROM users WHERE email = %s", ("admin@admin.com",))
     if not cursor.fetchone():
         hashed_pw = generate_password_hash("admin123")
         cursor.execute(
-            "INSERT INTO users (full_name, email, password_hash, role) VALUES (%s, %s, %s, %s)",
-            ("Administrador", "admin@admin.com", hashed_pw, "admin"),
+            "INSERT INTO users (full_name, email, password_hash, role, is_active) VALUES (%s, %s, %s, %s, %s)",
+            ("Administrador", "admin@admin.com", hashed_pw, "admin", 1),
         )
         conn.commit()
 
@@ -62,12 +61,10 @@ def login():
     if user and check_password_hash(user["password_hash"], password):
         return jsonify({
             "success": True,
-            "user": {
-                "user_id": user["user_id"],
-                "full_name": user["full_name"],
-                "role": user["role"],       # "admin" | "employee"
-                "email": user["email"],
-            },
+            "user_id": user["user_id"],
+            "name":    user["full_name"],
+            "email":   user["email"],
+            "role":    user["role"],
         })
 
     return jsonify({"success": False, "message": "Credenciales inválidas"}), 401
@@ -160,15 +157,14 @@ def get_users():
     cursor = conn.cursor(dictionary=True)
     try:
         cursor.execute(
-            "SELECT user_id, full_name, email, role, created_at "
+            "SELECT user_id, full_name, email, role, is_active, created_at "
             "FROM users WHERE role != 'admin'"
         )
         users = cursor.fetchall()
-        # Serializar fechas
         for u in users:
             if u.get("created_at"):
                 u["created_at"] = u["created_at"].isoformat()
-        return jsonify(users)
+        return jsonify({"users": users})
     finally:
         cursor.close()
         conn.close()
@@ -202,8 +198,11 @@ def get_logs():
     cursor = conn.cursor(dictionary=True)
     try:
         cursor.execute("""
-            SELECT l.log_id, l.access_status, l.confidence_score, l.event_time,
-                   u.full_name
+            SELECT l.log_id,
+                   l.access_status   AS access_result,
+                   l.confidence_score AS confidence,
+                   l.event_time,
+                   u.full_name        AS person_name
             FROM access_logs l
             LEFT JOIN users u ON l.user_id = u.user_id
             ORDER BY l.event_time DESC
@@ -213,7 +212,7 @@ def get_logs():
         for log in logs:
             if log.get("event_time"):
                 log["event_time"] = log["event_time"].isoformat()
-        return jsonify(logs)
+        return jsonify({"logs": logs})
     finally:
         cursor.close()
         conn.close()
