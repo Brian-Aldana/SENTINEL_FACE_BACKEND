@@ -202,7 +202,7 @@ def recognize():
     cursor = conn.cursor(dictionary=True)
     try:
         cursor.execute(
-            "SELECT employee_id, full_name, embedding FROM employees "
+            "SELECT employee_id AS user_id, full_name, embedding FROM employees "
             "WHERE embedding IS NOT NULL AND is_active = 1"
         )
         employees = cursor.fetchall()
