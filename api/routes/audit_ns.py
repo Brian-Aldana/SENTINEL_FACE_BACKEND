@@ -1,6 +1,6 @@
 from flask_restx import Namespace, Resource, fields
 from flask import request
-from api.controllers.audit_controller import get_all, get_by_id, remove
+from api.controllers.audit_controller import get_all, get_by_id
 
 ns = Namespace("audit", description="Auditoría de acciones administrativas")
 
@@ -33,11 +33,3 @@ class AuditItem(Resource):
         if error:
             ns.abort(404, error)
         return entry
-
-    @ns.response(200, "Registro eliminado")
-    @ns.response(404, "No encontrado")
-    def delete(self, audit_id):
-        ok, error = remove(audit_id)
-        if error:
-            ns.abort(404, error)
-        return {"success": True}

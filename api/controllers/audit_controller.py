@@ -10,9 +10,3 @@ def get_by_id(audit_id: int):
     if not entry:
         return None, "Registro no encontrado"
     return entry, None
-
-
-def remove(audit_id: int):
-    if not AuditModel.delete(audit_id):
-        return False, "Registro no encontrado"
-    return True, None
