@@ -1,6 +1,7 @@
 import os
 import re
 import json
+import traceback
 from flask import Flask, request, jsonify, Response
 from flask_cors import CORS
 import mysql.connector
@@ -190,13 +191,13 @@ def delete_employee(emp_id):
 
 @app.route("/api/recognize", methods=["POST"])
 def recognize():
-    image_file = request.files.get("image")
-    if not image_file:
-        return jsonify({"status": "error", "message": "No se proporcionó imagen"}), 400
+    frame_bytes_list = []
+    for key in sorted(request.files.keys()):
+        if key.startswith("frame_"):
+            frame_bytes_list.append(request.files[key].read())
 
-    image_bytes  = image_file.read()
-    extra_frames = [f.read() for k in ("image_1", "image_2")
-                    if (f := request.files.get(k))]
+    if not frame_bytes_list:
+        return jsonify({"status": "error", "message": "No se recibieron frames"}), 400
 
     conn   = get_db()
     cursor = conn.cursor(dictionary=True)
@@ -206,7 +207,9 @@ def recognize():
             "WHERE embedding IS NOT NULL AND is_active = 1"
         )
         employees = cursor.fetchall()
-        result    = process_recognition(image_bytes, employees, extra_frames or None)
+        result    = process_recognition(frame_bytes_list, employees)
+
+        snapshot = frame_bytes_list[len(frame_bytes_list) // 2]
 
         emp_id     = result.get("user_id")
         access     = result.get("access")
@@ -216,7 +219,7 @@ def recognize():
         cursor.execute(
             "INSERT INTO access_logs (employee_id, access_result, confidence, liveness, snapshot_img) "
             "VALUES (%s, %s, %s, %s, %s)",
-            (emp_id, access, confidence, liveness, image_bytes),
+            (emp_id, access, confidence, liveness, snapshot),
         )
         log_id = cursor.lastrowid
 
@@ -229,6 +232,7 @@ def recognize():
         conn.commit()
         return jsonify(result)
     except Exception as e:
+        traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:
         cursor.close()
