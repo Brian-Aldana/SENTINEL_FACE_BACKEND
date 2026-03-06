@@ -25,7 +25,7 @@ def register(name: str, document_id: str, admin_id, image_bytes: bytes):
         return None, "Nombre con caracteres inválidos"
 
     try:
-        embedding = process_registration(image_bytes)
+        embedding = process_registration(image_bytes, skip_liveness=True)
     except ValueError as e:
         return None, str(e)
 

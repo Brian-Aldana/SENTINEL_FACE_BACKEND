@@ -25,7 +25,7 @@ def _decode_image(image_bytes: bytes) -> np.ndarray:
     return img
 
 
-def process_registration(image_bytes: bytes) -> np.ndarray:
+def process_registration(image_bytes: bytes, skip_liveness: bool = False) -> np.ndarray:
     img   = _decode_image(image_bytes)
     faces = _face_app.get(img)
 
@@ -35,25 +35,18 @@ def process_registration(image_bytes: bytes) -> np.ndarray:
         raise ValueError("Se detectaron varios rostros. Solo debe haber una persona.")
 
     face = faces[0]
-    is_real, score, _ = _liveness.check_liveness(img, face.bbox)
 
-    if not is_real:
-        raise ValueError(
-            f"Anti-spoofing: imagen detectada como falsa (score={score:.2f}). "
-            "Use una cámara en vivo."
-        )
+    if not skip_liveness:
+        is_real, score, _ = _liveness.check_liveness(img, face.bbox)
+        if not is_real:
+            raise ValueError(
+                f"Anti-spoofing: imagen detectada como falsa (score={score:.2f}). "
+                "Use una cámara en vivo."
+            )
 
     return face.normed_embedding
 
-
 def process_recognition(frame_bytes_list: list, users_db: list) -> dict:
-    """
-    Recibe una lista de bytes (frames en orden cronológico).
-    1. Decodifica todos los frames
-    2. Detecta parpadeo con MediaPipe en la secuencia completa
-    3. Corre liveness model en el frame central
-    4. Compara embedding contra la DB
-    """
     if not frame_bytes_list:
         return {
             "status":     "error",
@@ -83,7 +76,6 @@ def process_recognition(frame_bytes_list: list, users_db: list) -> dict:
             "message":    "No se pudieron decodificar los frames.",
         }
 
-    # ── 1. Detección de parpadeo ──────────────────────────────────────────────
     blinked = detect_blink_in_sequence(frames)
     if not blinked:
         return {
@@ -96,7 +88,6 @@ def process_recognition(frame_bytes_list: list, users_db: list) -> dict:
             "message":    "No se detectó parpadeo. Posible foto o imagen estática.",
         }
 
-    # ── 2. Usar el frame central para liveness + reconocimiento ──────────────
     best_frame = frames[len(frames) // 2]
     faces      = _face_app.get(best_frame)
 
@@ -113,7 +104,6 @@ def process_recognition(frame_bytes_list: list, users_db: list) -> dict:
 
     face = faces[0]
 
-    # ── 3. Liveness model pasivo (segunda capa) ───────────────────────────────
     is_real, live_score, _ = _liveness.check_liveness(best_frame, face.bbox)
     if not is_real:
         return {
@@ -126,7 +116,6 @@ def process_recognition(frame_bytes_list: list, users_db: list) -> dict:
             "message":    f"Liveness fallido (score={live_score:.2f}). Posible video o deepfake.",
         }
 
-    # ── 4. Comparar embedding ─────────────────────────────────────────────────
     target     = face.normed_embedding
     best_id    = None
     best_name  = "Desconocido"
