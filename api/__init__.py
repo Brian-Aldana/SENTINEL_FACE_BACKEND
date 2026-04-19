@@ -3,6 +3,8 @@ from flask_restx import Api
 from flask_cors import CORS
 
 from api.routes.auth_ns      import ns as auth_ns
+from api.routes.usuario_ns   import ns as usuario_ns
+from api.routes.role_ns      import ns as role_ns
 from api.routes.employee_ns  import ns as employee_ns
 from api.routes.log_ns       import ns as log_ns
 from api.routes.alert_ns     import ns as alert_ns
@@ -11,13 +13,15 @@ from api.routes.recognize_ns import ns as recognize_ns
 
 api = Api(
     title="Sentinel Face API",
-    version="2.0",
+    version="3.0",
     description="Sistema de control de acceso biométrico con reconocimiento facial",
     doc="/swagger",
     prefix="/api",
 )
 
 api.add_namespace(auth_ns)
+api.add_namespace(usuario_ns)
+api.add_namespace(role_ns)
 api.add_namespace(employee_ns)
 api.add_namespace(log_ns)
 api.add_namespace(alert_ns)

@@ -27,15 +27,13 @@ class EmployeeList(Resource):
     def post(self):
         name       = request.form.get("name", "").strip()
         document   = request.form.get("document_id", "").strip()
-        admin_id   = request.form.get("admin_id")
+        usuario_id = request.form.get("usuario_id")
         image_file = request.files.get("image")
 
         if not name or not image_file:
             ns.abort(400, "Nombre e imagen son requeridos")
 
-        result, error = register(
-            name, document, admin_id, image_file.read()
-        )
+        result, error = register(name, document, usuario_id, image_file.read())
         if error:
             code = 409 if "duplicado" in error.lower() else 400
             ns.abort(code, error)
@@ -55,8 +53,8 @@ class EmployeeItem(Resource):
     @ns.response(200, "Empleado eliminado")
     @ns.response(404, "No encontrado")
     def delete(self, employee_id):
-        admin_id = request.args.get("admin_id")
-        ok, error = remove(employee_id, admin_id)
+        usuario_id = request.args.get("usuario_id")
+        ok, error  = remove(employee_id, usuario_id)
         if error:
             ns.abort(404, error)
         return {"success": True}

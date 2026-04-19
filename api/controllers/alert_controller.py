@@ -13,11 +13,11 @@ def get_by_id(alert_id: int):
     return alert, None
 
 
-def resolve(alert_id: int, admin_id):
-    ok = AlertModel.resolve(alert_id, admin_id)
+def resolve(alert_id: int, usuario_id):
+    ok = AlertModel.resolve(alert_id, usuario_id)
     if not ok:
         return False, "Alerta no encontrada"
-    AuditModel.record(admin_id, "RESOLVE_ALERT", "security_alerts", alert_id)
+    AuditModel.record(usuario_id, "RESOLVE_ALERT", "security_alerts", alert_id)
     return True, None
 
 

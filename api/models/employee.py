@@ -8,9 +8,9 @@ def find_all():
         cursor.execute("""
             SELECT e.employee_id, e.full_name, e.document_id,
                    e.is_active, e.created_at, e.updated_at,
-                   a.full_name AS registered_by
+                   u.full_name AS registered_by
             FROM employees e
-            LEFT JOIN admins a ON e.registered_by = a.admin_id
+            LEFT JOIN usuarios u ON e.registered_by = u.usuario_id
             ORDER BY e.created_at DESC
         """)
         rows = cursor.fetchall()
@@ -31,9 +31,9 @@ def find_by_id(employee_id: int):
         cursor.execute("""
             SELECT e.employee_id, e.full_name, e.document_id,
                    e.is_active, e.created_at, e.updated_at,
-                   a.full_name AS registered_by
+                   u.full_name AS registered_by
             FROM employees e
-            LEFT JOIN admins a ON e.registered_by = a.admin_id
+            LEFT JOIN usuarios u ON e.registered_by = u.usuario_id
             WHERE e.employee_id = %s
         """, (employee_id,))
         row = cursor.fetchone()
@@ -47,14 +47,14 @@ def find_by_id(employee_id: int):
         conn.close()
 
 
-def create(full_name: str, document_id: str, embedding: bytes, admin_id):
+def create(full_name: str, document_id: str, embedding: bytes, usuario_id):
     conn   = get_db()
     cursor = conn.cursor()
     try:
         cursor.execute(
             "INSERT INTO employees (full_name, document_id, embedding, registered_by) "
             "VALUES (%s, %s, %s, %s)",
-            (full_name, document_id, embedding, admin_id),
+            (full_name, document_id, embedding, usuario_id),
         )
         new_id = cursor.lastrowid
         conn.commit()

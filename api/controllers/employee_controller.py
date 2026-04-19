@@ -19,7 +19,7 @@ def get_by_id(employee_id: int):
     return emp, None
 
 
-def register(name: str, document_id: str, admin_id, image_bytes: bytes):
+def register(name: str, document_id: str, usuario_id, image_bytes: bytes):
     clean_name = _sanitize(name)
     if not clean_name:
         return None, "Nombre con caracteres inválidos"
@@ -31,22 +31,22 @@ def register(name: str, document_id: str, admin_id, image_bytes: bytes):
 
     try:
         new_id = EmployeeModel.create(
-            clean_name, document_id or None, embedding.tobytes(), admin_id
+            clean_name, document_id or None, embedding.tobytes(), usuario_id
         )
     except Exception as e:
         if "Duplicate" in str(e):
             return None, "El documento ya está registrado"
         return None, str(e)
 
-    AuditModel.record(admin_id, "CREATE_EMPLOYEE", "employees", new_id,
+    AuditModel.record(usuario_id, "CREATE_EMPLOYEE", "employees", new_id,
                       {"full_name": clean_name, "document_id": document_id})
     return {"success": True, "employee_id": new_id}, None
 
 
-def remove(employee_id: int, admin_id):
+def remove(employee_id: int, usuario_id):
     full_name = EmployeeModel.delete(employee_id)
     if full_name is None:
         return False, "Empleado no encontrado"
-    AuditModel.record(admin_id, "DELETE_EMPLOYEE", "employees", employee_id,
+    AuditModel.record(usuario_id, "DELETE_EMPLOYEE", "employees", employee_id,
                       {"full_name": full_name})
     return True, None
