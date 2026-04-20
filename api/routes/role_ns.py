@@ -1,6 +1,8 @@
 from flask_restx import Namespace, Resource, fields
 from flask import request
-from api.controllers.role_controller import get_all, get_by_id, create, remove
+from api.controllers.role_controller import (
+    get_all, get_by_id, create, deactivate, activate
+)
 
 ns = Namespace("roles", description="Gestión de roles del sistema")
 
@@ -8,6 +10,7 @@ role_model = ns.model("Rol", {
     "role_id":        fields.Integer,
     "name":           fields.String,
     "description":    fields.String,
+    "is_active":      fields.Boolean,
     "total_usuarios": fields.Integer,
     "created_at":     fields.String,
 })
@@ -18,12 +21,17 @@ create_model = ns.model("CrearRol", {
     "requestor_id": fields.Integer(required=True),
 })
 
+status_model = ns.model("CambioEstadoRol", {
+    "requestor_id": fields.Integer(required=True),
+})
+
 
 @ns.route("")
 class RoleList(Resource):
     @ns.response(200, "Lista de roles")
     def get(self):
-        return {"roles": get_all()}
+        include_inactive = request.args.get("include_inactive", "false").lower() == "true"
+        return {"roles": get_all(include_inactive)}
 
     @ns.expect(create_model)
     @ns.response(201, "Rol creado", role_model)
@@ -52,11 +60,32 @@ class RoleItem(Resource):
             ns.abort(404, err)
         return role
 
-    @ns.response(200, "Rol eliminado")
+
+@ns.route("/<int:role_id>/deactivate")
+class RoleDeactivate(Resource):
+    @ns.expect(status_model)
+    @ns.response(200, "Rol desactivado")
+    @ns.response(400, "Ya inactivo")
     @ns.response(404, "No encontrado")
-    def delete(self, role_id):
-        requestor   = request.args.get("requestor_id", 1)
-        ok, err = remove(role_id, requestor)
+    def patch(self, role_id):
+        data    = request.get_json() or {}
+        ok, err = deactivate(role_id, data.get("requestor_id", 1))
         if err:
-            ns.abort(404, err)
-        return {"success": True}
+            code = 404 if "no encontrado" in err.lower() else 400
+            ns.abort(code, err)
+        return {"success": True, "is_active": False}
+
+
+@ns.route("/<int:role_id>/activate")
+class RoleActivate(Resource):
+    @ns.expect(status_model)
+    @ns.response(200, "Rol activado")
+    @ns.response(400, "Ya activo")
+    @ns.response(404, "No encontrado")
+    def patch(self, role_id):
+        data    = request.get_json() or {}
+        ok, err = activate(role_id, data.get("requestor_id", 1))
+        if err:
+            code = 404 if "no encontrado" in err.lower() else 400
+            ns.abort(code, err)
+        return {"success": True, "is_active": True}

@@ -2,8 +2,8 @@ from api.models import usuario as UsuarioModel
 from api.models import audit as AuditModel
 
 
-def get_all():
-    return UsuarioModel.find_all()
+def get_all(include_inactive: bool = False):
+    return UsuarioModel.find_all(include_inactive)
 
 
 def get_by_id(usuario_id: int):
@@ -13,8 +13,7 @@ def get_by_id(usuario_id: int):
     return u, None
 
 
-def create(full_name: str, email: str, password: str,
-           roles: list, requestor_id):
+def create(full_name: str, email: str, password: str, roles: list, requestor_id):
     if not full_name or not email or not password:
         return None, "Nombre, email y contraseña son requeridos"
     try:
@@ -28,11 +27,20 @@ def create(full_name: str, email: str, password: str,
     return {"success": True, "usuario_id": new_id}, None
 
 
-def remove(usuario_id: int, requestor_id):
-    full_name = UsuarioModel.delete(usuario_id)
-    if full_name is None:
-        return False, "Usuario no encontrado"
-    AuditModel.record(requestor_id, "DELETE_USUARIO", "usuarios", usuario_id,
+def deactivate(usuario_id: int, requestor_id):
+    full_name, err = UsuarioModel.deactivate(usuario_id)
+    if err:
+        return False, err
+    AuditModel.record(requestor_id, "DEACTIVATE_USUARIO", "usuarios", usuario_id,
+                      {"full_name": full_name})
+    return True, None
+
+
+def activate(usuario_id: int, requestor_id):
+    full_name, err = UsuarioModel.activate(usuario_id)
+    if err:
+        return False, err
+    AuditModel.record(requestor_id, "ACTIVATE_USUARIO", "usuarios", usuario_id,
                       {"full_name": full_name})
     return True, None
 

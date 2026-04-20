@@ -2,17 +2,19 @@ from db import get_db
 from werkzeug.security import generate_password_hash, check_password_hash
 
 
-def find_all():
+def find_all(include_inactive: bool = False):
     conn   = get_db()
     cursor = conn.cursor(dictionary=True)
     try:
-        cursor.execute("""
+        where = "" if include_inactive else "WHERE u.is_active = 1"
+        cursor.execute(f"""
             SELECT u.usuario_id, u.full_name, u.email,
                    u.is_active, u.created_at, u.last_login,
                    GROUP_CONCAT(r.name ORDER BY r.name SEPARATOR ',') AS roles
             FROM usuarios u
             LEFT JOIN usuarios_roles ur ON u.usuario_id = ur.usuario_id
             LEFT JOIN roles r ON ur.role_id = r.role_id
+            {where}
             GROUP BY u.usuario_id
             ORDER BY u.created_at DESC
         """)
@@ -85,17 +87,18 @@ def create(full_name: str, email: str, password: str, role_names: list = None):
             (full_name, email, generate_password_hash(password)),
         )
         new_id = cursor.lastrowid
-
         if role_names:
             for role_name in role_names:
-                cursor.execute("SELECT role_id FROM roles WHERE name = %s", (role_name,))
+                cursor.execute(
+                    "SELECT role_id FROM roles WHERE name = %s AND is_active = 1",
+                    (role_name,)
+                )
                 role = cursor.fetchone()
                 if role:
                     cursor.execute(
                         "INSERT IGNORE INTO usuarios_roles (usuario_id, role_id) VALUES (%s, %s)",
                         (new_id, role[0]),
                     )
-
         conn.commit()
         return new_id
     finally:
@@ -103,17 +106,47 @@ def create(full_name: str, email: str, password: str, role_names: list = None):
         conn.close()
 
 
-def delete(usuario_id: int):
+def deactivate(usuario_id: int):
     conn   = get_db()
     cursor = conn.cursor(dictionary=True)
     try:
-        cursor.execute("SELECT full_name FROM usuarios WHERE usuario_id = %s", (usuario_id,))
+        cursor.execute(
+            "SELECT full_name, is_active FROM usuarios WHERE usuario_id = %s",
+            (usuario_id,)
+        )
         row = cursor.fetchone()
         if not row:
-            return None
-        cursor.execute("DELETE FROM usuarios WHERE usuario_id = %s", (usuario_id,))
+            return None, "Usuario no encontrado"
+        if not row["is_active"]:
+            return None, "El usuario ya está inactivo"
+        cursor.execute(
+            "UPDATE usuarios SET is_active = 0 WHERE usuario_id = %s", (usuario_id,)
+        )
         conn.commit()
-        return row["full_name"]
+        return row["full_name"], None
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def activate(usuario_id: int):
+    conn   = get_db()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute(
+            "SELECT full_name, is_active FROM usuarios WHERE usuario_id = %s",
+            (usuario_id,)
+        )
+        row = cursor.fetchone()
+        if not row:
+            return None, "Usuario no encontrado"
+        if row["is_active"]:
+            return None, "El usuario ya está activo"
+        cursor.execute(
+            "UPDATE usuarios SET is_active = 1 WHERE usuario_id = %s", (usuario_id,)
+        )
+        conn.commit()
+        return row["full_name"], None
     finally:
         cursor.close()
         conn.close()
@@ -167,24 +200,27 @@ def ensure_default_usuario():
     conn   = get_db()
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT usuario_id FROM usuarios WHERE email = %s", ("admin@admin.com",))
+        cursor.execute(
+            "SELECT usuario_id FROM usuarios WHERE email = %s", ("admin@admin.com",)
+        )
         if not cursor.fetchone():
             cursor.execute(
                 "INSERT INTO usuarios (full_name, email, password_hash) VALUES (%s, %s, %s)",
                 ("Administrador", "admin@admin.com", generate_password_hash("admin123")),
             )
             new_id = cursor.lastrowid
-
-            cursor.execute("SELECT role_id FROM roles WHERE name = 'admin'")
+            cursor.execute(
+                "SELECT role_id FROM roles WHERE name = 'admin' AND is_active = 1"
+            )
             role = cursor.fetchone()
             if not role:
                 cursor.execute(
-                    "INSERT INTO roles (name, description) VALUES ('admin', 'Administrador con acceso completo')"
+                    "INSERT INTO roles (name, description) "
+                    "VALUES ('admin', 'Administrador con acceso completo')"
                 )
                 role_id = cursor.lastrowid
             else:
                 role_id = role[0]
-
             cursor.execute(
                 "INSERT IGNORE INTO usuarios_roles (usuario_id, role_id) VALUES (%s, %s)",
                 (new_id, role_id),

@@ -1,7 +1,7 @@
 from flask_restx import Namespace, Resource, fields
 from flask import request
 from api.controllers.usuario_controller import (
-    get_all, get_by_id, create, remove, assign_role, remove_role
+    get_all, get_by_id, create, deactivate, activate, assign_role, remove_role
 )
 
 ns = Namespace("usuarios", description="Gestión de usuarios del sistema")
@@ -17,14 +17,19 @@ usuario_model = ns.model("Usuario", {
 })
 
 create_model = ns.model("CrearUsuario", {
-    "full_name": fields.String(required=True),
-    "email":     fields.String(required=True),
-    "password":  fields.String(required=True),
-    "roles":     fields.List(fields.String, description="Nombres de roles a asignar"),
+    "full_name":    fields.String(required=True),
+    "email":        fields.String(required=True),
+    "password":     fields.String(required=True),
+    "roles":        fields.List(fields.String),
+    "requestor_id": fields.Integer(required=True),
 })
 
-role_assign_model = ns.model("AsignarRol", {
+role_action_model = ns.model("AccionRol", {
     "role_id":      fields.Integer(required=True),
+    "requestor_id": fields.Integer(required=True),
+})
+
+status_model = ns.model("CambioEstado", {
     "requestor_id": fields.Integer(required=True),
 })
 
@@ -33,7 +38,8 @@ role_assign_model = ns.model("AsignarRol", {
 class UsuarioList(Resource):
     @ns.response(200, "Lista de usuarios")
     def get(self):
-        return {"usuarios": get_all()}
+        include_inactive = request.args.get("include_inactive", "false").lower() == "true"
+        return {"usuarios": get_all(include_inactive)}
 
     @ns.expect(create_model)
     @ns.response(201, "Usuario creado")
@@ -41,13 +47,12 @@ class UsuarioList(Resource):
     @ns.response(409, "Email duplicado")
     def post(self):
         data        = request.get_json() or {}
-        requestor   = data.get("requestor_id", 1)
         result, err = create(
             data.get("full_name", ""),
             data.get("email", ""),
             data.get("password", ""),
             data.get("roles", []),
-            requestor,
+            data.get("requestor_id", 1),
         )
         if err:
             code = 409 if "registrado" in err else 400
@@ -65,34 +70,54 @@ class UsuarioItem(Resource):
             ns.abort(404, err)
         return u
 
-    @ns.response(200, "Usuario eliminado")
+
+@ns.route("/<int:usuario_id>/deactivate")
+class UsuarioDeactivate(Resource):
+    @ns.expect(status_model)
+    @ns.response(200, "Usuario desactivado")
+    @ns.response(400, "Ya inactivo")
     @ns.response(404, "No encontrado")
-    def delete(self, usuario_id):
-        requestor   = request.args.get("requestor_id", 1)
-        ok, err = remove(usuario_id, requestor)
+    def patch(self, usuario_id):
+        data    = request.get_json() or {}
+        ok, err = deactivate(usuario_id, data.get("requestor_id", 1))
         if err:
-            ns.abort(404, err)
-        return {"success": True}
+            code = 404 if "no encontrado" in err.lower() else 400
+            ns.abort(code, err)
+        return {"success": True, "is_active": False}
+
+
+@ns.route("/<int:usuario_id>/activate")
+class UsuarioActivate(Resource):
+    @ns.expect(status_model)
+    @ns.response(200, "Usuario activado")
+    @ns.response(400, "Ya activo")
+    @ns.response(404, "No encontrado")
+    def patch(self, usuario_id):
+        data    = request.get_json() or {}
+        ok, err = activate(usuario_id, data.get("requestor_id", 1))
+        if err:
+            code = 404 if "no encontrado" in err.lower() else 400
+            ns.abort(code, err)
+        return {"success": True, "is_active": True}
 
 
 @ns.route("/<int:usuario_id>/roles")
 class UsuarioRoles(Resource):
-    @ns.expect(role_assign_model)
+    @ns.expect(role_action_model)
     @ns.response(200, "Rol asignado")
     @ns.response(400, "Ya asignado")
-    @ns.response(404, "No encontrado")
     def post(self, usuario_id):
-        data        = request.get_json() or {}
+        data    = request.get_json() or {}
         ok, err = assign_role(usuario_id, data.get("role_id"), data.get("requestor_id", 1))
         if err:
             ns.abort(400, err)
         return {"success": True}
 
-    @ns.expect(role_assign_model)
+    @ns.expect(role_action_model)
     @ns.response(200, "Rol removido")
     @ns.response(400, "No tiene ese rol")
     def delete(self, usuario_id):
-        data        = request.get_json() or {}
+        data    = request.get_json() or {}
         ok, err = remove_role(usuario_id, data.get("role_id"), data.get("requestor_id", 1))
         if err:
             ns.abort(400, err)

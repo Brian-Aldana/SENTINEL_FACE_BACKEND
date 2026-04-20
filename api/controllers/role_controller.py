@@ -2,8 +2,8 @@ from api.models import role as RoleModel
 from api.models import audit as AuditModel
 
 
-def get_all():
-    return RoleModel.find_all()
+def get_all(include_inactive: bool = False):
+    return RoleModel.find_all(include_inactive)
 
 
 def get_by_id(role_id: int):
@@ -27,10 +27,19 @@ def create(name: str, description: str, requestor_id):
     return {"success": True, "role_id": new_id}, None
 
 
-def remove(role_id: int, requestor_id):
-    name = RoleModel.delete(role_id)
-    if name is None:
-        return False, "Rol no encontrado"
-    AuditModel.record(requestor_id, "DELETE_ROLE", "roles", role_id,
+def deactivate(role_id: int, requestor_id):
+    name, err = RoleModel.deactivate(role_id)
+    if err:
+        return False, err
+    AuditModel.record(requestor_id, "DEACTIVATE_ROLE", "roles", role_id,
+                      {"name": name})
+    return True, None
+
+
+def activate(role_id: int, requestor_id):
+    name, err = RoleModel.activate(role_id)
+    if err:
+        return False, err
+    AuditModel.record(requestor_id, "ACTIVATE_ROLE", "roles", role_id,
                       {"name": name})
     return True, None

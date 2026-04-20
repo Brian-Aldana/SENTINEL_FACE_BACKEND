@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS roles (
     role_id     INT UNSIGNED    NOT NULL AUTO_INCREMENT,
     name        VARCHAR(80)     NOT NULL,
     description VARCHAR(255)        NULL,
+    is_active   TINYINT(1)      NOT NULL DEFAULT 1,
     created_at  DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (role_id),
     UNIQUE KEY uq_role_name (name)
@@ -120,11 +121,9 @@ CREATE TABLE IF NOT EXISTS audit_log (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ── SEEDS ────────────────────────────────────────────────────
--- Rol por defecto
 INSERT IGNORE INTO roles (name, description)
 VALUES ('admin', 'Administrador con acceso completo al sistema');
 
--- Usuario administrador por defecto
 INSERT IGNORE INTO usuarios (full_name, email, password_hash)
 VALUES (
     'Administrador',
@@ -132,7 +131,6 @@ VALUES (
     'scrypt:32768:8:1$2V7hkBilDTTHhClz$12e84315915768b906340ebde2745131538a7c46cf777a856343c5bb8fc992b3e443cfa19a5992fb5e7daee5937133bf30dc94f0918d60c66d3321a6268aa362'
 );
 
--- Asignar rol admin al usuario por defecto
 INSERT IGNORE INTO usuarios_roles (usuario_id, role_id)
 SELECT u.usuario_id, r.role_id
 FROM usuarios u, roles r
