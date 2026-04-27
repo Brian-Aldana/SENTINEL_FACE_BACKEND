@@ -1,5 +1,6 @@
 from flask_restx import Namespace, Resource, fields
 from flask import request
+from flask_jwt_extended import jwt_required
 from api.controllers.alert_controller import get_all, get_by_id, resolve, remove
 
 ns = Namespace("alerts", description="Alertas de seguridad")
@@ -21,6 +22,7 @@ resolve_model = ns.model("Resolve", {
 
 @ns.route("")
 class AlertList(Resource):
+    @jwt_required()
     @ns.response(200, "Lista de alertas")
     def get(self):
         resolved = request.args.get("resolved", 0)
@@ -29,6 +31,7 @@ class AlertList(Resource):
 
 @ns.route("/<int:alert_id>")
 class AlertItem(Resource):
+    @jwt_required()
     @ns.response(200, "Alerta encontrada", alert_model)
     @ns.response(404, "No encontrada")
     def get(self, alert_id):
@@ -37,6 +40,7 @@ class AlertItem(Resource):
             ns.abort(404, error)
         return alert
 
+    @jwt_required()
     @ns.response(200, "Alerta eliminada")
     @ns.response(404, "No encontrada")
     def delete(self, alert_id):
@@ -48,6 +52,7 @@ class AlertItem(Resource):
 
 @ns.route("/<int:alert_id>/resolve")
 class AlertResolve(Resource):
+    @jwt_required()
     @ns.expect(resolve_model)
     @ns.response(200, "Alerta resuelta")
     @ns.response(404, "No encontrada")

@@ -1,5 +1,6 @@
 from flask_restx import Namespace, Resource, fields
 from flask import request
+from flask_jwt_extended import jwt_required
 from api.controllers.audit_controller import get_all, get_by_id
 
 ns = Namespace("audit", description="Auditoría de acciones administrativas")
@@ -18,6 +19,7 @@ audit_model = ns.model("AuditEntry", {
 
 @ns.route("")
 class AuditList(Resource):
+    @jwt_required()
     @ns.response(200, "Registros de auditoría")
     def get(self):
         limit = request.args.get("limit", 100)
@@ -26,6 +28,7 @@ class AuditList(Resource):
 
 @ns.route("/<int:audit_id>")
 class AuditItem(Resource):
+    @jwt_required()
     @ns.response(200, "Registro encontrado", audit_model)
     @ns.response(404, "No encontrado")
     def get(self, audit_id):

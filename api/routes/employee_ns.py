@@ -1,5 +1,6 @@
 from flask_restx import Namespace, Resource, fields
 from flask import request
+from flask_jwt_extended import jwt_required
 from api.controllers.employee_controller import get_all, get_by_id, register, remove
 
 ns = Namespace("employees", description="Gestión de empleados")
@@ -17,10 +18,12 @@ employee_model = ns.model("Employee", {
 
 @ns.route("")
 class EmployeeList(Resource):
+    @jwt_required()
     @ns.response(200, "Lista de empleados")
     def get(self):
         return {"employees": get_all()}
 
+    @jwt_required()
     @ns.response(201, "Empleado registrado")
     @ns.response(400, "Datos inválidos")
     @ns.response(409, "Documento duplicado")
@@ -42,6 +45,7 @@ class EmployeeList(Resource):
 
 @ns.route("/<int:employee_id>")
 class EmployeeItem(Resource):
+    @jwt_required()
     @ns.response(200, "Empleado encontrado", employee_model)
     @ns.response(404, "No encontrado")
     def get(self, employee_id):
@@ -50,6 +54,7 @@ class EmployeeItem(Resource):
             ns.abort(404, error)
         return emp
 
+    @jwt_required()
     @ns.response(200, "Empleado eliminado")
     @ns.response(404, "No encontrado")
     def delete(self, employee_id):

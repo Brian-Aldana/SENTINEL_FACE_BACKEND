@@ -1,5 +1,6 @@
 from flask_restx import Namespace, Resource, fields
 from flask import request
+from flask_jwt_extended import jwt_required
 from api.controllers.usuario_controller import (
     get_all, get_by_id, create, deactivate, activate, assign_role, remove_role
 )
@@ -36,11 +37,13 @@ status_model = ns.model("CambioEstado", {
 
 @ns.route("")
 class UsuarioList(Resource):
+    @jwt_required()
     @ns.response(200, "Lista de usuarios")
     def get(self):
         include_inactive = request.args.get("include_inactive", "false").lower() == "true"
         return {"usuarios": get_all(include_inactive)}
 
+    @jwt_required()
     @ns.expect(create_model)
     @ns.response(201, "Usuario creado")
     @ns.response(400, "Datos inválidos")
@@ -62,6 +65,7 @@ class UsuarioList(Resource):
 
 @ns.route("/<int:usuario_id>")
 class UsuarioItem(Resource):
+    @jwt_required()
     @ns.response(200, "Usuario encontrado", usuario_model)
     @ns.response(404, "No encontrado")
     def get(self, usuario_id):
@@ -73,6 +77,7 @@ class UsuarioItem(Resource):
 
 @ns.route("/<int:usuario_id>/deactivate")
 class UsuarioDeactivate(Resource):
+    @jwt_required()
     @ns.expect(status_model)
     @ns.response(200, "Usuario desactivado")
     @ns.response(400, "Ya inactivo")
@@ -88,6 +93,7 @@ class UsuarioDeactivate(Resource):
 
 @ns.route("/<int:usuario_id>/activate")
 class UsuarioActivate(Resource):
+    @jwt_required()
     @ns.expect(status_model)
     @ns.response(200, "Usuario activado")
     @ns.response(400, "Ya activo")
@@ -103,6 +109,7 @@ class UsuarioActivate(Resource):
 
 @ns.route("/<int:usuario_id>/roles")
 class UsuarioRoles(Resource):
+    @jwt_required()
     @ns.expect(role_action_model)
     @ns.response(200, "Rol asignado")
     @ns.response(400, "Ya asignado")
@@ -113,6 +120,7 @@ class UsuarioRoles(Resource):
             ns.abort(400, err)
         return {"success": True}
 
+    @jwt_required()
     @ns.expect(role_action_model)
     @ns.response(200, "Rol removido")
     @ns.response(400, "No tiene ese rol")

@@ -1,5 +1,6 @@
 from flask_restx import Namespace, Resource, fields
 from flask import request
+from flask_jwt_extended import jwt_required
 from api.controllers.role_controller import (
     get_all, get_by_id, create, deactivate, activate
 )
@@ -28,11 +29,13 @@ status_model = ns.model("CambioEstadoRol", {
 
 @ns.route("")
 class RoleList(Resource):
+    @jwt_required()
     @ns.response(200, "Lista de roles")
     def get(self):
         include_inactive = request.args.get("include_inactive", "false").lower() == "true"
         return {"roles": get_all(include_inactive)}
 
+    @jwt_required()
     @ns.expect(create_model)
     @ns.response(201, "Rol creado", role_model)
     @ns.response(400, "Datos inválidos")
@@ -52,6 +55,7 @@ class RoleList(Resource):
 
 @ns.route("/<int:role_id>")
 class RoleItem(Resource):
+    @jwt_required()
     @ns.response(200, "Rol encontrado", role_model)
     @ns.response(404, "No encontrado")
     def get(self, role_id):
@@ -63,6 +67,7 @@ class RoleItem(Resource):
 
 @ns.route("/<int:role_id>/deactivate")
 class RoleDeactivate(Resource):
+    @jwt_required()
     @ns.expect(status_model)
     @ns.response(200, "Rol desactivado")
     @ns.response(400, "Ya inactivo")
@@ -78,6 +83,7 @@ class RoleDeactivate(Resource):
 
 @ns.route("/<int:role_id>/activate")
 class RoleActivate(Resource):
+    @jwt_required()
     @ns.expect(status_model)
     @ns.response(200, "Rol activado")
     @ns.response(400, "Ya activo")
