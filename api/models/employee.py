@@ -92,3 +92,27 @@ def find_active_with_embeddings():
     finally:
         cursor.close()
         conn.close()
+
+
+def deactivate(employee_id: int):
+    conn   = get_db()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute(
+            "SELECT full_name, is_active FROM employees WHERE employee_id = %s",
+            (employee_id,)
+        )
+        row = cursor.fetchone()
+        if not row:
+            return None, "Empleado no encontrado"
+        if not row["is_active"]:
+            return None, "El empleado ya está inactivo"
+        cursor.execute(
+            "UPDATE employees SET is_active = 0, updated_at = NOW() WHERE employee_id = %s",
+            (employee_id,)
+        )
+        conn.commit()
+        return row["full_name"], None
+    finally:
+        cursor.close()
+        conn.close()

@@ -1,7 +1,7 @@
 from flask_restx import Namespace, Resource, fields
 from flask import request
 from flask_jwt_extended import jwt_required
-from api.controllers.employee_controller import get_all, get_by_id, register, remove
+from api.controllers.employee_controller import get_all, get_by_id, register, remove, deactivate
 from api.decorators import admin_required
 
 ns = Namespace("employees", description="Gestión de empleados")
@@ -14,6 +14,10 @@ employee_model = ns.model("Employee", {
     "registered_by": fields.String,
     "created_at":    fields.String,
     "updated_at":    fields.String,
+})
+
+deactivate_model = ns.model("DeactivateEmployee", {
+    "usuario_id": fields.String(required=True),
 })
 
 
@@ -30,10 +34,10 @@ class EmployeeList(Resource):
     @ns.response(400, "Datos inválidos")
     @ns.response(409, "Documento duplicado")
     def post(self):
-        name       = request.form.get("name", "").strip()
+        name       = request.form.get("full_name", "").strip()
         document   = request.form.get("document_id", "").strip()
         usuario_id = request.form.get("usuario_id")
-        image_file = request.files.get("image")
+        image_file = request.files.get("photo")
 
         if not name or not image_file:
             ns.abort(400, "Nombre e imagen son requeridos")
@@ -66,3 +70,21 @@ class EmployeeItem(Resource):
         if error:
             ns.abort(404, error)
         return {"success": True}
+
+
+@ns.route("/<int:employee_id>/deactivate")
+class EmployeeDeactivate(Resource):
+    @admin_required
+    @ns.expect(deactivate_model)
+    @ns.response(200, "Empleado desactivado")
+    @ns.response(400, "Ya inactivo")
+    @ns.response(403, "Rol de administrador requerido")
+    @ns.response(404, "No encontrado")
+    def patch(self, employee_id):
+        data       = request.get_json(silent=True) or {}
+        usuario_id = data.get("usuario_id")
+        ok, err    = deactivate(employee_id, usuario_id)
+        if err:
+            code = 404 if "no encontrado" in err.lower() else 400
+            ns.abort(code, err)
+        return {"success": True, "is_active": False}
