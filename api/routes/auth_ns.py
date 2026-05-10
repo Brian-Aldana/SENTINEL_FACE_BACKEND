@@ -2,6 +2,7 @@ from flask_restx import Namespace, Resource, fields
 from flask import request
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from api.controllers.auth_controller import login
+import json
 
 ns = Namespace("auth", description="Autenticación de usuarios")
 
@@ -38,11 +39,11 @@ class AuthLogin(Resource):
         if error:
             ns.abort(401, error)
 
-        token = create_access_token(identity={
+        token = create_access_token(identity=json.dumps({
             "usuario_id": result["usuario_id"],
             "email":      result["email"],
             "roles":      result["roles"],
-        })
+        }))
 
         return {**result, "access_token": token}
 
