@@ -2,6 +2,7 @@ from flask_restx import Namespace, Resource, fields
 from flask import request
 from flask_jwt_extended import jwt_required
 from api.controllers.employee_controller import get_all, get_by_id, register, remove
+from api.decorators import admin_required
 
 ns = Namespace("employees", description="Gestión de empleados")
 
@@ -23,8 +24,9 @@ class EmployeeList(Resource):
     def get(self):
         return {"employees": get_all()}
 
-    @jwt_required()
+    @admin_required
     @ns.response(201, "Empleado registrado")
+    @ns.response(403, "Rol de administrador requerido")
     @ns.response(400, "Datos inválidos")
     @ns.response(409, "Documento duplicado")
     def post(self):
@@ -54,8 +56,9 @@ class EmployeeItem(Resource):
             ns.abort(404, error)
         return emp
 
-    @jwt_required()
+    @admin_required
     @ns.response(200, "Empleado eliminado")
+    @ns.response(403, "Rol de administrador requerido")
     @ns.response(404, "No encontrado")
     def delete(self, employee_id):
         usuario_id = request.args.get("usuario_id")

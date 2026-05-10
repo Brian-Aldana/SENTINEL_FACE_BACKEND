@@ -4,6 +4,7 @@ from flask_jwt_extended import jwt_required
 from api.controllers.role_controller import (
     get_all, get_by_id, create, deactivate, activate
 )
+from api.decorators import admin_required
 
 ns = Namespace("roles", description="Gestión de roles del sistema")
 
@@ -35,10 +36,11 @@ class RoleList(Resource):
         include_inactive = request.args.get("include_inactive", "false").lower() == "true"
         return {"roles": get_all(include_inactive)}
 
-    @jwt_required()
+    @admin_required
     @ns.expect(create_model)
     @ns.response(201, "Rol creado", role_model)
     @ns.response(400, "Datos inválidos")
+    @ns.response(403, "Rol de administrador requerido")
     @ns.response(409, "Nombre duplicado")
     def post(self):
         data        = request.get_json() or {}
@@ -67,9 +69,10 @@ class RoleItem(Resource):
 
 @ns.route("/<int:role_id>/deactivate")
 class RoleDeactivate(Resource):
-    @jwt_required()
+    @admin_required
     @ns.expect(status_model)
     @ns.response(200, "Rol desactivado")
+    @ns.response(403, "Rol de administrador requerido")
     @ns.response(400, "Ya inactivo")
     @ns.response(404, "No encontrado")
     def patch(self, role_id):
@@ -83,9 +86,10 @@ class RoleDeactivate(Resource):
 
 @ns.route("/<int:role_id>/activate")
 class RoleActivate(Resource):
-    @jwt_required()
+    @admin_required
     @ns.expect(status_model)
     @ns.response(200, "Rol activado")
+    @ns.response(403, "Rol de administrador requerido")
     @ns.response(400, "Ya activo")
     @ns.response(404, "No encontrado")
     def patch(self, role_id):
