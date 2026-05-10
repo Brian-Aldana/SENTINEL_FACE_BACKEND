@@ -30,6 +30,25 @@ api.add_namespace(alert_ns)
 api.add_namespace(audit_ns)
 api.add_namespace(recognize_ns)
 
+import jwt
+from flask_jwt_extended.exceptions import JWTExtendedException, NoAuthorizationError
+
+@api.errorhandler(NoAuthorizationError)
+def handle_auth_error(e):
+    return {'message': str(e)}, 401
+
+@api.errorhandler(JWTExtendedException)
+def handle_jwt_exceptions(e):
+    return {'message': str(e)}, 401
+
+@api.errorhandler(jwt.ExpiredSignatureError)
+def handle_expired_error(e):
+    return {'message': 'El token ha expirado'}, 401
+
+@api.errorhandler(jwt.InvalidTokenError)
+def handle_invalid_error(e):
+    return {'message': 'El token es inválido'}, 401
+
 
 def create_app():
     app = Flask(__name__)
