@@ -4,6 +4,7 @@ from flask_jwt_extended import jwt_required
 from api.controllers.usuario_controller import (
     get_all, get_by_id, create, deactivate, activate, assign_role, remove_role
 )
+from api.decorators import admin_required
 
 ns = Namespace("usuarios", description="Gestión de usuarios del sistema")
 
@@ -43,9 +44,10 @@ class UsuarioList(Resource):
         include_inactive = request.args.get("include_inactive", "false").lower() == "true"
         return {"usuarios": get_all(include_inactive)}
 
-    @jwt_required()
+    @admin_required
     @ns.expect(create_model)
     @ns.response(201, "Usuario creado")
+    @ns.response(403, "Rol de administrador requerido")
     @ns.response(400, "Datos inválidos")
     @ns.response(409, "Email duplicado")
     def post(self):
@@ -77,9 +79,10 @@ class UsuarioItem(Resource):
 
 @ns.route("/<int:usuario_id>/deactivate")
 class UsuarioDeactivate(Resource):
-    @jwt_required()
+    @admin_required
     @ns.expect(status_model)
     @ns.response(200, "Usuario desactivado")
+    @ns.response(403, "Rol de administrador requerido")
     @ns.response(400, "Ya inactivo")
     @ns.response(404, "No encontrado")
     def patch(self, usuario_id):
@@ -93,9 +96,10 @@ class UsuarioDeactivate(Resource):
 
 @ns.route("/<int:usuario_id>/activate")
 class UsuarioActivate(Resource):
-    @jwt_required()
+    @admin_required
     @ns.expect(status_model)
     @ns.response(200, "Usuario activado")
+    @ns.response(403, "Rol de administrador requerido")
     @ns.response(400, "Ya activo")
     @ns.response(404, "No encontrado")
     def patch(self, usuario_id):
@@ -109,9 +113,10 @@ class UsuarioActivate(Resource):
 
 @ns.route("/<int:usuario_id>/roles")
 class UsuarioRoles(Resource):
-    @jwt_required()
+    @admin_required
     @ns.expect(role_action_model)
     @ns.response(200, "Rol asignado")
+    @ns.response(403, "Rol de administrador requerido")
     @ns.response(400, "Ya asignado")
     def post(self, usuario_id):
         data    = request.get_json() or {}
@@ -120,9 +125,10 @@ class UsuarioRoles(Resource):
             ns.abort(400, err)
         return {"success": True}
 
-    @jwt_required()
+    @admin_required
     @ns.expect(role_action_model)
     @ns.response(200, "Rol removido")
+    @ns.response(403, "Rol de administrador requerido")
     @ns.response(400, "No tiene ese rol")
     def delete(self, usuario_id):
         data    = request.get_json() or {}

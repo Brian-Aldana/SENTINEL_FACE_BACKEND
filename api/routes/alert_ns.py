@@ -2,6 +2,7 @@ from flask_restx import Namespace, Resource, fields
 from flask import request
 from flask_jwt_extended import jwt_required
 from api.controllers.alert_controller import get_all, get_by_id, resolve, remove
+from api.decorators import admin_required
 
 ns = Namespace("alerts", description="Alertas de seguridad")
 
@@ -16,7 +17,7 @@ alert_model = ns.model("Alert", {
 })
 
 resolve_model = ns.model("Resolve", {
-    "admin_id": fields.Integer(required=True),
+    "usuario_id": fields.Integer(required=True),
 })
 
 
@@ -40,8 +41,9 @@ class AlertItem(Resource):
             ns.abort(404, error)
         return alert
 
-    @jwt_required()
+    @admin_required
     @ns.response(200, "Alerta eliminada")
+    @ns.response(403, "Rol de administrador requerido")
     @ns.response(404, "No encontrada")
     def delete(self, alert_id):
         ok, error = remove(alert_id)
@@ -52,14 +54,15 @@ class AlertItem(Resource):
 
 @ns.route("/<int:alert_id>/resolve")
 class AlertResolve(Resource):
-    @jwt_required()
+    @admin_required
     @ns.expect(resolve_model)
     @ns.response(200, "Alerta resuelta")
+    @ns.response(403, "Rol de administrador requerido")
     @ns.response(404, "No encontrada")
     def patch(self, alert_id):
-        data     = request.get_json(silent=True) or {}
-        admin_id = data.get("admin_id")
-        ok, error = resolve(alert_id, admin_id)
+        data       = request.get_json(silent=True) or {}
+        usuario_id = data.get("usuario_id")
+        ok, error  = resolve(alert_id, usuario_id)
         if error:
             ns.abort(404, error)
         return {"success": True}
