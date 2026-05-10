@@ -10,7 +10,7 @@ def find_all(result_filter=None, limit=50):
         cursor.execute(f"""
             SELECT l.log_id, l.access_result, l.confidence,
                    l.liveness, l.event_time,
-                   e.full_name AS person_name
+                   e.full_name AS full_name
             FROM access_logs l
             LEFT JOIN employees e ON l.employee_id = e.employee_id
             {where}
@@ -33,7 +33,7 @@ def find_by_id(log_id: int):
         cursor.execute("""
             SELECT l.log_id, l.access_result, l.confidence,
                    l.liveness, l.event_time,
-                   e.full_name AS person_name
+                   e.full_name AS full_name
             FROM access_logs l
             LEFT JOIN employees e ON l.employee_id = e.employee_id
             WHERE l.log_id = %s

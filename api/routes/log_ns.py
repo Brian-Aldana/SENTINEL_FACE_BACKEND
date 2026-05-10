@@ -1,6 +1,7 @@
 from flask_restx import Namespace, Resource, fields
 from flask import request, Response
 from flask_jwt_extended import jwt_required
+from api.decorators import admin_required
 from api.controllers.log_controller import get_all, get_by_id, recognize, remove, get_image
 
 ns = Namespace("logs", description="Registro de accesos")
@@ -11,7 +12,7 @@ log_model = ns.model("AccessLog", {
     "confidence":  fields.Float,
     "liveness":    fields.String,
     "event_time":  fields.String,
-    "person_name": fields.String,
+    "full_name": fields.String,
 })
 
 
@@ -36,8 +37,9 @@ class LogItem(Resource):
             ns.abort(404, error)
         return log
 
-    @jwt_required()
+    @admin_required
     @ns.response(200, "Log eliminado")
+    @ns.response(403, "Rol de administrador requerido")
     @ns.response(404, "No encontrado")
     def delete(self, log_id):
         ok, error = remove(log_id)

@@ -34,7 +34,7 @@ def find_by_id(alert_id: int):
                    sa.description, sa.resolved, sa.created_at,
                    sa.resolved_at, sa.log_id,
                    al.event_time,
-                   u.full_name AS resolved_by_name
+                   u.full_name AS resolved_by
             FROM security_alerts sa
             LEFT JOIN access_logs al ON sa.log_id = al.log_id
             LEFT JOIN usuarios u ON sa.resolved_by = u.usuario_id
