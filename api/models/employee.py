@@ -47,18 +47,33 @@ def find_by_id(employee_id: int):
         conn.close()
 
 
-def create(full_name: str, document_id: str, embedding: bytes, usuario_id):
+def create(full_name: str, document_id: str, embedding: bytes, usuario_id, photo_img: bytes = None):
     conn   = get_db()
     cursor = conn.cursor()
     try:
         cursor.execute(
-            "INSERT INTO employees (full_name, document_id, embedding, registered_by) "
-            "VALUES (%s, %s, %s, %s)",
-            (full_name, document_id, embedding, usuario_id),
+            "INSERT INTO employees (full_name, document_id, embedding, registered_by, photo_img) "
+            "VALUES (%s, %s, %s, %s, %s)",
+            (full_name, document_id, embedding, usuario_id, photo_img),
         )
         new_id = cursor.lastrowid
         conn.commit()
         return new_id
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def get_image(employee_id: int):
+    conn   = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "SELECT photo_img FROM employees WHERE employee_id = %s",
+            (employee_id,)
+        )
+        row = cursor.fetchone()
+        return row[0] if row else None
     finally:
         cursor.close()
         conn.close()

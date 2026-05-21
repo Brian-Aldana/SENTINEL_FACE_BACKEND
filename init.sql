@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS employees (
     full_name     VARCHAR(150)    NOT NULL,
     document_id   VARCHAR(50)         NULL,
     embedding     BLOB                NULL,
+    photo_img     MEDIUMBLOB          NULL,
     is_active     TINYINT(1)      NOT NULL DEFAULT 1,
     registered_by INT UNSIGNED        NULL,
     created_at    DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,

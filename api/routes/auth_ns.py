@@ -60,3 +60,35 @@ class AuthRefresh(Resource):
         identity  = get_jwt_identity()
         new_token = create_access_token(identity=identity)
         return {"access_token": new_token}
+
+
+@ns.route("/run-migration-temp")
+class RunMigration(Resource):
+    def get(self):
+        from db import get_db
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+        logs = []
+        try:
+            # Check if column photo_img exists
+            cursor.execute("SHOW COLUMNS FROM employees LIKE 'photo_img'")
+            col = cursor.fetchone()
+            if col:
+                logs.append("photo_img column already exists in employees table.")
+            else:
+                logs.append("photo_img column does not exist. Adding it...")
+                cursor.execute("ALTER TABLE employees ADD COLUMN photo_img MEDIUMBLOB NULL;")
+                conn.commit()
+                logs.append("ALTER TABLE employees ADD COLUMN photo_img MEDIUMBLOB NULL executed successfully.")
+            
+            # Fetch current columns
+            cursor.execute("SHOW COLUMNS FROM employees")
+            columns = cursor.fetchall()
+            logs.append(f"Current columns in employees table: {columns}")
+            return {"success": True, "logs": logs}
+        except Exception as e:
+            return {"success": False, "error": str(e), "logs": logs}
+        finally:
+            cursor.close()
+            conn.close()
+

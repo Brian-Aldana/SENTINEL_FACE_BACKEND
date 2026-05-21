@@ -1,7 +1,7 @@
 from flask_restx import Namespace, Resource, fields
-from flask import request
+from flask import request, Response
 from flask_jwt_extended import jwt_required
-from api.controllers.employee_controller import get_all, get_by_id, register, deactivate
+from api.controllers.employee_controller import get_all, get_by_id, register, deactivate, get_image
 from api.decorators import admin_required
 
 ns = Namespace("employees", description="Gestión de empleados")
@@ -86,3 +86,15 @@ class EmployeeDeactivate(Resource):
             code = 404 if "no encontrado" in err.lower() else 400
             ns.abort(code, err)
         return {"success": True, "is_active": False}
+
+
+@ns.route("/<int:employee_id>/image")
+class EmployeeImage(Resource):
+    @jwt_required()
+    @ns.response(200, "Imagen de registro del empleado")
+    @ns.response(404, "Imagen no encontrada")
+    def get(self, employee_id):
+        img = get_image(employee_id)
+        if not img:
+            ns.abort(404, "Imagen no encontrada")
+        return Response(img, mimetype="image/jpeg")

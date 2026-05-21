@@ -31,7 +31,7 @@ def register(name: str, document_id: str, usuario_id, image_bytes: bytes):
 
     try:
         new_id = EmployeeModel.create(
-            clean_name, document_id or None, embedding.tobytes(), usuario_id
+            clean_name, document_id or None, embedding.tobytes(), usuario_id, image_bytes
         )
     except Exception as e:
         if "Duplicate" in str(e):
@@ -41,6 +41,10 @@ def register(name: str, document_id: str, usuario_id, image_bytes: bytes):
     AuditModel.record(usuario_id, "CREATE_EMPLOYEE", "employees", new_id,
                       {"full_name": clean_name, "document_id": document_id})
     return {"success": True, "employee_id": new_id}, None
+
+
+def get_image(employee_id: int):
+    return EmployeeModel.get_image(employee_id)
 
 
 def remove(employee_id: int, usuario_id):
