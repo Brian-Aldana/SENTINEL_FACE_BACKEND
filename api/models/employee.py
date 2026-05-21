@@ -131,3 +131,28 @@ def deactivate(employee_id: int):
     finally:
         cursor.close()
         conn.close()
+
+
+def activate(employee_id: int):
+    conn   = get_db()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute(
+            "SELECT full_name, is_active FROM employees WHERE employee_id = %s",
+            (employee_id,)
+        )
+        row = cursor.fetchone()
+        if not row:
+            return None, "Empleado no encontrado"
+        if row["is_active"]:
+            return None, "El empleado ya está activo"
+        cursor.execute(
+            "UPDATE employees SET is_active = 1, updated_at = NOW() WHERE employee_id = %s",
+            (employee_id,)
+        )
+        conn.commit()
+        return row["full_name"], None
+    finally:
+        cursor.close()
+        conn.close()
+

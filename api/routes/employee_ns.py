@@ -1,7 +1,7 @@
 from flask_restx import Namespace, Resource, fields
 from flask import request, Response
 from flask_jwt_extended import jwt_required
-from api.controllers.employee_controller import get_all, get_by_id, register, deactivate, get_image
+from api.controllers.employee_controller import get_all, get_by_id, register, deactivate, activate, get_image
 from api.decorators import admin_required
 
 ns = Namespace("employees", description="Gestión de empleados")
@@ -86,6 +86,24 @@ class EmployeeDeactivate(Resource):
             code = 404 if "no encontrado" in err.lower() else 400
             ns.abort(code, err)
         return {"success": True, "is_active": False}
+
+
+@ns.route("/<int:employee_id>/activate")
+class EmployeeActivate(Resource):
+    @admin_required
+    @ns.expect(deactivate_model)  # re-use same model to obtain usuario_id / requestor
+    @ns.response(200, "Empleado activado")
+    @ns.response(400, "Ya activo")
+    @ns.response(403, "Rol de administrador requerido")
+    @ns.response(404, "No encontrado")
+    def patch(self, employee_id):
+        data       = request.get_json(silent=True) or {}
+        usuario_id = data.get("usuario_id")
+        ok, err    = activate(employee_id, usuario_id)
+        if err:
+            code = 404 if "no encontrado" in err.lower() else 400
+            ns.abort(code, err)
+        return {"success": True, "is_active": True}
 
 
 @ns.route("/<int:employee_id>/image")

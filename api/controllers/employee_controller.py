@@ -63,3 +63,13 @@ def deactivate(employee_id: int, usuario_id):
     AuditModel.record(usuario_id, "DEACTIVATE_EMPLOYEE", "employees", employee_id,
                       {"full_name": full_name})
     return True, None
+
+
+def activate(employee_id: int, usuario_id):
+    full_name, err = EmployeeModel.activate(employee_id)
+    if err:
+        return False, err
+    AuditModel.record(usuario_id, "ACTIVATE_EMPLOYEE", "employees", employee_id,
+                      {"full_name": full_name})
+    return True, None
+
