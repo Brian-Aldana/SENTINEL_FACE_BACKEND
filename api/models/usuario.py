@@ -198,14 +198,7 @@ def remove_role(usuario_id: int, role_id: int):
 
 
 def ensure_default_usuario():
-    admin_email    = os.getenv("ADMIN_DEFAULT_EMAIL", "admin@sentinel.local")
-    admin_password = os.getenv("ADMIN_DEFAULT_PASSWORD")
-
-    if not admin_password:
-        raise RuntimeError(
-            "ADMIN_DEFAULT_PASSWORD no está definida. "
-            "Configure esta variable de entorno antes de iniciar la aplicación."
-        )
+    admin_email = os.getenv("ADMIN_DEFAULT_EMAIL", "admin@admin.com")
 
     conn   = get_db()
     cursor = conn.cursor()
@@ -213,29 +206,39 @@ def ensure_default_usuario():
         cursor.execute(
             "SELECT usuario_id FROM usuarios WHERE email = %s", (admin_email,)
         )
-        if not cursor.fetchone():
-            cursor.execute(
-                "INSERT INTO usuarios (full_name, email, password_hash) VALUES (%s, %s, %s)",
-                ("Administrador", admin_email, generate_password_hash(admin_password)),
+        if cursor.fetchone():
+            return  # El admin ya existe, no hay nada que hacer
+
+        # El admin no existe → necesitamos crearlo, exigir contraseña
+        admin_password = os.getenv("ADMIN_DEFAULT_PASSWORD")
+        if not admin_password:
+            raise RuntimeError(
+                "ADMIN_DEFAULT_PASSWORD no está definida. "
+                "Se necesita para crear el usuario admin inicial."
             )
-            new_id = cursor.lastrowid
+
+        cursor.execute(
+            "INSERT INTO usuarios (full_name, email, password_hash) VALUES (%s, %s, %s)",
+            ("Administrador", admin_email, generate_password_hash(admin_password)),
+        )
+        new_id = cursor.lastrowid
+        cursor.execute(
+            "SELECT role_id FROM roles WHERE name = 'admin' AND is_active = 1"
+        )
+        role = cursor.fetchone()
+        if not role:
             cursor.execute(
-                "SELECT role_id FROM roles WHERE name = 'admin' AND is_active = 1"
+                "INSERT INTO roles (name, description) "
+                "VALUES ('admin', 'Administrador con acceso completo')"
             )
-            role = cursor.fetchone()
-            if not role:
-                cursor.execute(
-                    "INSERT INTO roles (name, description) "
-                    "VALUES ('admin', 'Administrador con acceso completo')"
-                )
-                role_id = cursor.lastrowid
-            else:
-                role_id = role[0]
-            cursor.execute(
-                "INSERT IGNORE INTO usuarios_roles (usuario_id, role_id) VALUES (%s, %s)",
-                (new_id, role_id),
-            )
-            conn.commit()
+            role_id = cursor.lastrowid
+        else:
+            role_id = role[0]
+        cursor.execute(
+            "INSERT IGNORE INTO usuarios_roles (usuario_id, role_id) VALUES (%s, %s)",
+            (new_id, role_id),
+        )
+        conn.commit()
     finally:
         cursor.close()
         conn.close()
