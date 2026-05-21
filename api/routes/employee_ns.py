@@ -1,7 +1,7 @@
 from flask_restx import Namespace, Resource, fields
 from flask import request
 from flask_jwt_extended import jwt_required
-from api.controllers.employee_controller import get_all, get_by_id, register, remove, deactivate
+from api.controllers.employee_controller import get_all, get_by_id, register, deactivate
 from api.decorators import admin_required
 
 ns = Namespace("employees", description="Gestión de empleados")
@@ -61,15 +61,13 @@ class EmployeeItem(Resource):
         return emp
 
     @admin_required
-    @ns.response(200, "Empleado eliminado")
-    @ns.response(403, "Rol de administrador requerido")
-    @ns.response(404, "No encontrado")
+    @ns.response(405, "Operación no permitida — usar PATCH /deactivate")
     def delete(self, employee_id):
-        usuario_id = request.args.get("usuario_id")
-        ok, error  = remove(employee_id, usuario_id)
-        if error:
-            ns.abort(404, error)
-        return {"success": True}
+        ns.abort(
+            405,
+            "El borrado físico de empleados está deshabilitado. "
+            "Use PATCH /employees/{id}/deactivate para desactivar el registro."
+        )
 
 
 @ns.route("/<int:employee_id>/deactivate")

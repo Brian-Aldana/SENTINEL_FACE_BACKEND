@@ -1,3 +1,4 @@
+import mysql.connector
 from api.models import role as RoleModel
 from api.models import audit as AuditModel
 
@@ -18,10 +19,12 @@ def create(name: str, description: str, requestor_id):
         return None, "El nombre del rol es requerido"
     try:
         new_id = RoleModel.create(name.strip().lower(), description)
-    except Exception as e:
-        if "Duplicate" in str(e):
+    except mysql.connector.errors.IntegrityError as e:
+        if e.errno == 1062:
             return None, "Ya existe un rol con ese nombre"
-        return None, str(e)
+        return None, "Error de integridad en la base de datos"
+    except mysql.connector.Error:
+        return None, "Error interno al crear el rol"
     AuditModel.record(requestor_id, "CREATE_ROLE", "roles", new_id,
                       {"name": name})
     return {"success": True, "role_id": new_id}, None

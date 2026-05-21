@@ -2,7 +2,7 @@ from flask_restx import Namespace, Resource, fields
 from flask import request
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from api.controllers.auth_controller import login
-import json
+from api import limiter
 
 ns = Namespace("auth", description="Autenticación de usuarios")
 
@@ -23,10 +23,12 @@ auth_response = ns.model("AuthResponse", {
 
 @ns.route("/login")
 class AuthLogin(Resource):
+    @limiter.limit("5 per minute")
     @ns.expect(login_model)
     @ns.response(200, "Login exitoso", auth_response)
     @ns.response(400, "Campos requeridos")
     @ns.response(401, "Credenciales inválidas")
+    @ns.response(429, "Demasiados intentos")
     def post(self):
         data     = request.get_json() or {}
         email    = data.get("email", "").strip()
@@ -39,18 +41,19 @@ class AuthLogin(Resource):
         if error:
             ns.abort(401, error)
 
-        token = create_access_token(identity=json.dumps({
+        # B-06: Dict directo — sin json.dumps
+        token = create_access_token(identity={
             "usuario_id": result["usuario_id"],
             "email":      result["email"],
             "roles":      result["roles"],
-        }))
+        })
 
         return {**result, "access_token": token}
 
 
 @ns.route("/refresh")
 class AuthRefresh(Resource):
-    @jwt_required()
+    @jwt_required(verify_type=False)  # B-03: Acepta tokens expirados para poder renovarlos
     @ns.response(200, "Token renovado")
     @ns.response(401, "Token inválido o expirado")
     def post(self):

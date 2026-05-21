@@ -1,3 +1,4 @@
+import os
 from db import get_db
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -197,16 +198,25 @@ def remove_role(usuario_id: int, role_id: int):
 
 
 def ensure_default_usuario():
+    admin_email    = os.getenv("ADMIN_DEFAULT_EMAIL", "admin@sentinel.local")
+    admin_password = os.getenv("ADMIN_DEFAULT_PASSWORD")
+
+    if not admin_password:
+        raise RuntimeError(
+            "ADMIN_DEFAULT_PASSWORD no está definida. "
+            "Configure esta variable de entorno antes de iniciar la aplicación."
+        )
+
     conn   = get_db()
     cursor = conn.cursor()
     try:
         cursor.execute(
-            "SELECT usuario_id FROM usuarios WHERE email = %s", ("admin@admin.com",)
+            "SELECT usuario_id FROM usuarios WHERE email = %s", (admin_email,)
         )
         if not cursor.fetchone():
             cursor.execute(
                 "INSERT INTO usuarios (full_name, email, password_hash) VALUES (%s, %s, %s)",
-                ("Administrador", "admin@admin.com", generate_password_hash("admin123")),
+                ("Administrador", admin_email, generate_password_hash(admin_password)),
             )
             new_id = cursor.lastrowid
             cursor.execute(
@@ -229,3 +239,4 @@ def ensure_default_usuario():
     finally:
         cursor.close()
         conn.close()
+
