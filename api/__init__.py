@@ -73,6 +73,9 @@ def create_app():
         os.getenv("JWT_ACCESS_TOKEN_EXPIRES", 3600)
     )
 
+    # Permite payloads estructurados (diccionarios) en el claim 'sub' con PyJWT 2.x
+    app.config["JWT_VERIFY_SUB"] = False
+
     JWTManager(app)
 
     # B-01: CORS restringido a orígenes configurados
