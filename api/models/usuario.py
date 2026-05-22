@@ -196,6 +196,27 @@ def remove_role(usuario_id: int, role_id: int):
         cursor.close()
         conn.close()
 
+def change_password(usuario_id: int, current_password: str, new_password: str):
+    conn   = get_db()
+    cursor = conn.cursor(dictionary=True)
+    try:
+        cursor.execute("SELECT password_hash, full_name FROM usuarios WHERE usuario_id = %s AND is_active = 1", (usuario_id,))
+        row = cursor.fetchone()
+        if not row:
+            return False, "Usuario no encontrado"
+        if not check_password_hash(row["password_hash"], current_password):
+            return False, "La contraseña actual es incorrecta"
+        
+        cursor.execute(
+            "UPDATE usuarios SET password_hash = %s WHERE usuario_id = %s",
+            (generate_password_hash(new_password), usuario_id)
+        )
+        conn.commit()
+        return True, row["full_name"]
+    finally:
+        cursor.close()
+        conn.close()
+
 
 def ensure_default_usuario():
     admin_email = os.getenv("ADMIN_DEFAULT_EMAIL", "admin@admin.com")
