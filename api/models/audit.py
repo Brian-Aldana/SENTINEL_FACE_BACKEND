@@ -14,7 +14,7 @@ def find_all(limit=100):
             FROM audit_log al
             LEFT JOIN usuarios u ON al.usuario_id = u.usuario_id
             ORDER BY al.created_at DESC LIMIT %s
-        """, (limit,))
+        """, (int(limit),))
         rows = cursor.fetchall()
         for r in rows:
             if r.get("created_at"):

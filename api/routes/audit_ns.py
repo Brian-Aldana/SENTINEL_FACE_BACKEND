@@ -22,7 +22,7 @@ class AuditList(Resource):
     @jwt_required()
     @ns.response(200, "Registros de auditoría")
     def get(self):
-        limit = request.args.get("limit", 100)
+        limit = request.args.get("limit", 100, type=int)
         return {"audit": get_all(limit)}
 
 
