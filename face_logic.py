@@ -34,11 +34,18 @@ def process_registration(image_bytes: bytes, skip_liveness: bool = False) -> np.
     if len(faces) == 0:
         del img
         gc.collect()
-        raise ValueError("No se detectó ningún rostro en la imagen.")
+        raise ValueError(
+            "No se detectó ningún rostro en la foto. Por favor, asegúrese de que el rostro "
+            "esté de frente, bien iluminado (sin sombras fuertes ni contraluz) y libre de "
+            "accesorios que lo cubran (lentes de sol, gorras, tapabocas, etc.)."
+        )
     if len(faces) > 1:
         del img
         gc.collect()
-        raise ValueError("Se detectaron varios rostros. Solo debe haber una persona.")
+        raise ValueError(
+            "Se detectaron varios rostros en la foto. Por favor, asegúrese de que solo "
+            "aparezca el usuario en la toma, evitando rostros de fondo u otras personas."
+        )
 
     face = faces[0]
 
