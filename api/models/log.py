@@ -1,12 +1,25 @@
 from db import get_db
 
 
-def find_all(result_filter=None, limit=50):
+def find_all(result_filter=None, limit=20, page=1):
     conn   = get_db()
     cursor = conn.cursor(dictionary=True)
     try:
+        limit  = min(int(limit), 100)
+        page   = max(int(page), 1)
+        offset = (page - 1) * limit
+
         where  = "WHERE l.access_result = %s" if result_filter else ""
         params = [result_filter] if result_filter else []
+
+        # Total de registros para saber si hay más páginas
+        cursor.execute(f"""
+            SELECT COUNT(*) AS total
+            FROM access_logs l
+            {where}
+        """, params)
+        total = cursor.fetchone()["total"]
+
         cursor.execute(f"""
             SELECT l.log_id, l.access_result, l.confidence,
                    l.liveness, l.event_time,
@@ -14,13 +27,20 @@ def find_all(result_filter=None, limit=50):
             FROM access_logs l
             LEFT JOIN employees e ON l.employee_id = e.employee_id
             {where}
-            ORDER BY l.event_time DESC LIMIT %s
-        """, params + [min(int(limit), 200)])
+            ORDER BY l.event_time DESC
+            LIMIT %s OFFSET %s
+        """, params + [limit, offset])
         rows = cursor.fetchall()
         for r in rows:
             if r.get("event_time"):
                 r["event_time"] = r["event_time"].isoformat()
-        return rows
+        return {
+            "items": rows,
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "has_more": (offset + len(rows)) < total,
+        }
     finally:
         cursor.close()
         conn.close()

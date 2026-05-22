@@ -2,8 +2,8 @@ from api.models import alert as AlertModel
 from api.models import audit as AuditModel
 
 
-def get_all(resolved=0):
-    return AlertModel.find_all(resolved)
+def get_all(resolved=0, limit=20, page=1):
+    return AlertModel.find_all(resolved, limit, page)
 
 
 def get_by_id(alert_id: int):

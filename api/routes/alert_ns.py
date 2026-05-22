@@ -24,10 +24,19 @@ resolve_model = ns.model("Resolve", {
 @ns.route("")
 class AlertList(Resource):
     @jwt_required()
-    @ns.response(200, "Lista de alertas")
+    @ns.response(200, "Lista de alertas paginada")
     def get(self):
-        resolved = request.args.get("resolved", 0)
-        return {"alerts": get_all(resolved)}
+        resolved = request.args.get("resolved", 0, type=int)
+        limit    = request.args.get("limit", 20, type=int)
+        page     = request.args.get("page",  1,  type=int)
+        data     = get_all(resolved, limit, page)
+        return {
+            "alerts":   data["items"],
+            "total":    data["total"],
+            "page":     data["page"],
+            "limit":    data["limit"],
+            "has_more": data["has_more"],
+        }
 
 
 @ns.route("/<int:alert_id>")

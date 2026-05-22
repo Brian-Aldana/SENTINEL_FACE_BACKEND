@@ -19,11 +19,19 @@ log_model = ns.model("AccessLog", {
 @ns.route("")
 class LogList(Resource):
     @jwt_required()
-    @ns.response(200, "Lista de logs")
+    @ns.response(200, "Lista de logs paginada")
     def get(self):
         result_filter = request.args.get("result")
-        limit         = request.args.get("limit", 50)
-        return {"logs": get_all(result_filter, limit)}
+        limit         = request.args.get("limit", 20, type=int)
+        page          = request.args.get("page",  1,  type=int)
+        data          = get_all(result_filter, limit, page)
+        return {
+            "logs":     data["items"],
+            "total":    data["total"],
+            "page":     data["page"],
+            "limit":    data["limit"],
+            "has_more": data["has_more"],
+        }
 
 
 @ns.route("/<int:log_id>")

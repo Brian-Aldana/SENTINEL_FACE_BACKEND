@@ -1,10 +1,20 @@
 from db import get_db
 
 
-def find_all(resolved=0):
+def find_all(resolved=0, limit=20, page=1):
     conn   = get_db()
     cursor = conn.cursor(dictionary=True)
     try:
+        limit  = min(int(limit), 100)
+        page   = max(int(page), 1)
+        offset = (page - 1) * limit
+
+        cursor.execute(
+            "SELECT COUNT(*) AS total FROM security_alerts WHERE resolved = %s",
+            (resolved,)
+        )
+        total = cursor.fetchone()["total"]
+
         cursor.execute("""
             SELECT sa.alert_id, sa.alert_type, sa.severity,
                    sa.description, sa.resolved, sa.created_at,
@@ -12,14 +22,21 @@ def find_all(resolved=0):
             FROM security_alerts sa
             LEFT JOIN access_logs al ON sa.log_id = al.log_id
             WHERE sa.resolved = %s
-            ORDER BY sa.created_at DESC LIMIT 100
-        """, (resolved,))
+            ORDER BY sa.created_at DESC
+            LIMIT %s OFFSET %s
+        """, (resolved, limit, offset))
         rows = cursor.fetchall()
         for r in rows:
             for f in ("created_at", "event_time", "resolved_at"):
                 if r.get(f):
                     r[f] = r[f].isoformat()
-        return rows
+        return {
+            "items": rows,
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "has_more": (offset + len(rows)) < total,
+        }
     finally:
         cursor.close()
         conn.close()

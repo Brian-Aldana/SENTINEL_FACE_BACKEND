@@ -4,8 +4,8 @@ from api.models import employee as EmployeeModel
 from face_logic import process_recognition
 
 
-def get_all(result_filter=None, limit=50):
-    return LogModel.find_all(result_filter, limit)
+def get_all(result_filter=None, limit=20, page=1):
+    return LogModel.find_all(result_filter, limit, page)
 
 
 def get_by_id(log_id: int):

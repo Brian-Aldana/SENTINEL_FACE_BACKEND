@@ -3,23 +3,37 @@ from flask import request
 from db import get_db
 
 
-def find_all(limit=100):
+def find_all(limit=20, page=1):
     conn   = get_db()
     cursor = conn.cursor(dictionary=True)
     try:
+        limit  = min(int(limit), 100)
+        page   = max(int(page), 1)
+        offset = (page - 1) * limit
+
+        cursor.execute("SELECT COUNT(*) AS total FROM audit_log")
+        total = cursor.fetchone()["total"]
+
         cursor.execute("""
             SELECT al.audit_id, al.action, al.target_table,
                    al.target_id, al.detail, al.ip_address, al.created_at,
                    u.full_name AS usuario_name
             FROM audit_log al
             LEFT JOIN usuarios u ON al.usuario_id = u.usuario_id
-            ORDER BY al.created_at DESC LIMIT %s
-        """, (int(limit),))
+            ORDER BY al.created_at DESC
+            LIMIT %s OFFSET %s
+        """, (limit, offset))
         rows = cursor.fetchall()
         for r in rows:
             if r.get("created_at"):
                 r["created_at"] = r["created_at"].isoformat()
-        return rows
+        return {
+            "items": rows,
+            "total": total,
+            "page": page,
+            "limit": limit,
+            "has_more": (offset + len(rows)) < total,
+        }
     finally:
         cursor.close()
         conn.close()

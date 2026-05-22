@@ -20,10 +20,18 @@ audit_model = ns.model("AuditEntry", {
 @ns.route("")
 class AuditList(Resource):
     @jwt_required()
-    @ns.response(200, "Registros de auditoría")
+    @ns.response(200, "Registros de auditoría paginados")
     def get(self):
-        limit = request.args.get("limit", 100, type=int)
-        return {"audit": get_all(limit)}
+        limit = request.args.get("limit", 20, type=int)
+        page  = request.args.get("page",  1,  type=int)
+        data  = get_all(limit, page)
+        return {
+            "audit":    data["items"],
+            "total":    data["total"],
+            "page":     data["page"],
+            "limit":    data["limit"],
+            "has_more": data["has_more"],
+        }
 
 
 @ns.route("/<int:audit_id>")
